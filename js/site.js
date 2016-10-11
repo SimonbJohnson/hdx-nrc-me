@@ -101,20 +101,26 @@ function renderCharts(data,geoFilter){
     pdata.forEach(function(d,di){
         $('#title'+di).html('<h4>'+d[config.aggTag]+'</h4>');
         config.charts.forEach(function(c,i){
-            var width = $('#charts'+di+'_'+i).width()
+            pieChart('#charts'+di+'_'+i,d[c[0]],d[c[1]]);
+        });
+    });
+}
+
+function pieChart(id,partial,whole){
+            var width = $(id).width()
             var radius = Math.min(width,80)/2;
             var inner = Math.min(width,100)*0.15;
-            var svg = d3.select('#charts'+di+'_'+i).append("svg")
+            var svg = d3.select(id).append("svg")
                 .attr("width", width)
                 .attr("height",radius*2);
 
 
-            if(d[c[1]]>0){
+            if(whole>0){
                 var partialArc = d3.svg.arc()
                     .innerRadius(radius-inner)
                     .outerRadius(radius)
                     .startAngle(0)
-                    .endAngle(Math.PI*2*d[c[0]]/d[c[1]]);
+                    .endAngle(Math.PI*2*partial/whole);
 
                 var totalArc = d3.svg.arc()
                     .innerRadius(radius-inner)
@@ -135,13 +141,11 @@ function renderCharts(data,geoFilter){
                 svg.append("text")
                     .attr("x",radius)
                     .attr("y",radius+5)
-                    .text(d3.format(".0%")(d[c[0]]/d[c[1]]))
+                    .text(d3.format(".0%")(partial/whole))
                     .style("text-anchor", "middle");
 
-                $('#charts'+di+'_'+i).append('<p class="figure">Reached: '+d[c[0]]+'</p><p class="figure">Targeted: '+d[c[1]]+'</p>')
+                $(id).append('<p class="figure">Reached: '+partial+'</p><p class="figure">Targeted: '+whole+'</p>');
             }
-        });
-    });
 }
 
 function hxlProxyToJSON(input,headers){
