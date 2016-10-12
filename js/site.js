@@ -1,12 +1,16 @@
 var config = {
+    title:'',
+    description:'Select a country below to see the breakdown of activities.',
     dataURL:'https://proxy.hxlstandard.org/data.json?strip-headers=on&url=https%3A//docs.google.com/spreadsheets/d/1VVIO5avDBZ5W_nDGNHK-0axcvKuedeZnnM_EtuTAwEs/edit%3Fusp%3Dsharing',
     geoURL:'data/geom.json',
+    geoName:'name',
     colors:['#FFFFFF','#d0d1e6','#a6bddb','#74a9cf','#2b8cbe','#045a8d'],
     source:'Text Source',
     link:'http://linktodata',
     geoTag:'#country',
     aggTag:'#sector',
     charts:[['#reached+male','#targeted+male'],['#reached+female','#targeted+female'],['#reached+total','#targeted+total']],
+    titles:['Males','Females','Total'],
     mainColor:'#ff6600',
 }
 
@@ -15,8 +19,8 @@ function generateDashboard(config,data,geom){
     var baselayer2 = L.tileLayer('https://data.hdx.rwlabs.org/mapbox-layer-tiles/{z}/{x}/{y}.png', {minZoom:4});
 
     map = L.map('map',{
-                center: [0,0],
-                zoom: 2,
+                center: [7,40],
+                zoom: 4,
                 layers: [baselayer,baselayer2]
             });
 
@@ -29,22 +33,41 @@ function generateDashboard(config,data,geom){
             }
         }).addTo(map);
 
+    var info = L.control();
+
+    info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info');
+        this.update();
+        return this._div;
+    };
+
+    info.update = function (props) {
+        this._div.innerHTML = (props ? props[config.geoName] : 'Hover location for details');
+    };
+
+    info.addTo(map);    
+
     renderCharts(data,'All');
 
     function onEachFeature(feature, layer) {
         layer.on({
-            click:function(){renderCharts(data,feature.properties.name);}
+            click:function(){renderCharts(data,feature.properties[config.geoName]);},
+            mouseover: highlightFeature,
+            mouseout: resetHighlight
         });
+    }
+
+    function highlightFeature(e) {
+        info.update(e.target.feature.properties);
+    }
+
+    function resetHighlight(e) {
+        info.update();
     }
 
 }
 
-function constructHTML(data){
-    // get unique list of object property values;
-}
-
 function renderCharts(data,geoFilter){
-    console.log(geoFilter);
     if(geoFilter!='All'){
         $('#charttitle').html('<h4><a id="allfilter">All countries</a> > '+geoFilter+'</h4>');
         $('#allfilter').on('click',function(e){
@@ -55,9 +78,15 @@ function renderCharts(data,geoFilter){
     }
     var tags = [].concat.apply([], config.charts);
     var processedData = {};
-    var totals = {};
+    totals={};
+    tags.forEach(function(t){
+        totals[t]=0
+    });
     data.forEach(function(d){
         if(d[config.geoTag]==geoFilter || geoFilter=='All'){
+            tags.forEach(function(t){
+                totals[t] += parseInt(d[t]);
+            });
             if(processedData[d[config.aggTag]]==undefined){
                 processedData[d[config.aggTag]] = {};
                 tags.forEach(function(t){
@@ -79,17 +108,21 @@ function renderCharts(data,geoFilter){
             if(processedData[key][c[1]]==0){
                 zero=true;
             }
-        })
+        });
         if(zero==false){
             pdata.push(processedData[key]);
         }
     }
-    console.log(pdata);
+
     $('#charts').html();
     length = 12/(config.charts.length+1);
-    var html = '';
+    var html = '<div class="row"><div class="col-md-'+length+'"></div>';
+    config.charts.forEach(function(c,i){
+        html += '<div class="col-md-'+length+'"><h4>'+config.titles[i]+'</h4></div>';
+    });
+    html +='</div>';
     pdata.forEach(function(d,i){
-        html +='<div id="charts'+i+'" class="row"><div id="title'+i+'" class="col-md-'+length+'"></div>';
+        html +='<div id="charts'+i+'" class="row chartrow"><div id="title'+i+'" class="col-md-'+length+'"></div>';
         config.charts.forEach(function(c,i2){
             html+='<div id="charts'+i+'_'+i2+'" class="col-md-'+length+'"></div>';
         });
@@ -104,6 +137,16 @@ function renderCharts(data,geoFilter){
             pieChart('#charts'+di+'_'+i,d[c[0]],d[c[1]]);
         });
     });
+    if(geoFilter=='All'){
+        geoFilter = 'All Countries'
+    }
+    length = 12/(config.charts.length);
+    $('#total').html('<h4>Totals for '+geoFilter+'</h4>');
+    config.charts.forEach(function(c,i){
+        $('#total').append('<div id="total'+i+'" class="col-md-'+length+'">' + config.titles[i] + '<p></p></div>');
+        pieChart('#total'+i,totals[c[0]],totals[c[1]]);
+    });
+
 }
 
 function pieChart(id,partial,whole){
@@ -178,6 +221,8 @@ function hxlProxyToJSON(input,headers){
 
 var map;
 
+$('#title').html(config.title);
+$('#description').html(config.description);
 //load data
 
 var dataCall = $.ajax({ 
