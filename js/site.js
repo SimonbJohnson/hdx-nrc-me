@@ -125,6 +125,7 @@ function renderCharts(data,geoFilter){
             }
         }
     });
+
     pdata = []
     for(key in processedData){
         processedData[key][agg] = key;
@@ -143,6 +144,7 @@ function renderCharts(data,geoFilter){
             texcess[i]+=e;
         });
     });
+
     $('#charts').html();
     length = 12/(config.charts.length+1);
     var html = '<div class="row"><div class="col-md-'+length+'"></div>';
@@ -187,7 +189,7 @@ function renderCharts(data,geoFilter){
         $('#total').append('<div id="total'+i+'" class="col-md-'+length+'">' + config.titles[i] + '<p></p></div>');
         pieChart('#total'+i,totals[c[0]],totals[c[1]],texcess[i]);
     });
-    $('#total').append('<p>Totals show the sum of the clusters.  The actual total of unique beneficiares may be smaller as some clusters serve the same beneficiaries.')
+    $('#total').append('<p>Totals show the sum of beneficiaries reached. The actual total of unique beneficiaries may differ because in some locations the same beneficiaries are served by more than 1 core-competency.')
 
 }
 
@@ -300,7 +302,6 @@ $.when(dataCall, geomCall).then(function(dataArgs, geomArgs){
     var countries = unique(data.map(function(d){
         return d[config['geoTag']];
     }));
-    console.log(countries);
     for (var i = geom.features.length-1; i >= 0; i--) {
         if (countries.indexOf(geom.features[i].properties[config['geoName']])==-1) {
             geom.features.splice(i, 1);
